@@ -56,6 +56,8 @@ class GraphDB:
             CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source_id);
             CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_id);
             CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(type_key);
+            CREATE INDEX IF NOT EXISTS idx_edges_source_type ON edges(source_id, type_key);
+            CREATE INDEX IF NOT EXISTS idx_edges_target_type ON edges(target_id, type_key);
             CREATE INDEX IF NOT EXISTS idx_nodes_kind ON nodes(kind);
             """
         )
@@ -183,22 +185,33 @@ class GraphDB:
     def _incident_edges(self, key: str, direction: str, type_key: str | None) -> Iterable[dict[str, Any]]:
         if direction not in {"out", "in", "both"}:
             raise ValueError("direction must be one of: out, in, both")
-        parts = []
-        params: list[Any] = []
-        if direction in {"out", "both"}:
-            parts.append("s.key = ?")
-            params.append(key)
-        if direction in {"in", "both"}:
-            parts.append("t.key = ?")
-            params.append(key)
+        if direction == "both":
+            node_id = self.get_node(key)["id"]
+            type_clause = " AND e.type_key = ?" if type_key else ""
+            params: list[Any] = [node_id, node_id]
+            if type_key:
+                params.append(type_key)
+            rows = self.conn.execute(
+                f"""
+                SELECT e.*, s.key AS source_key, t.key AS target_key
+                FROM edges e JOIN nodes s ON s.id = e.source_id JOIN nodes t ON t.id = e.target_id
+                WHERE (e.source_id = ? OR e.target_id = ?){type_clause}
+                ORDER BY e.id
+                """,
+                params,
+            ).fetchall()
+            return [self._edge(r) for r in rows]
+
+        side = "s.key" if direction == "out" else "t.key"
         type_clause = " AND e.type_key = ?" if type_key else ""
+        params = [key]
         if type_key:
             params.append(type_key)
         rows = self.conn.execute(
             f"""
             SELECT e.*, s.key AS source_key, t.key AS target_key
             FROM edges e JOIN nodes s ON s.id = e.source_id JOIN nodes t ON t.id = e.target_id
-            WHERE ({' OR '.join(parts)}){type_clause}
+            WHERE ({side} = ?){type_clause}
             ORDER BY e.id
             """,
             params,

@@ -48,3 +48,26 @@ def test_path_returns_not_found():
     result = db.path("a", "z")
 
     assert result == {"found": False, "nodes": [], "edges": [], "length": None}
+
+
+def test_neighbors_both_query_plan_avoids_edge_scan():
+    db = GraphDB()
+    for i in range(20):
+        db.add_edge(f"n{i}", "rel", f"n{i + 1}")
+    db.add_edge("hub", "rel", "n0")
+    db.add_edge("n1", "rel", "hub")
+
+    hub_id = db.get_node("hub")["id"]
+    plan_rows = db.conn.execute(
+        """
+        EXPLAIN QUERY PLAN
+        SELECT e.*, s.key AS source_key, t.key AS target_key
+        FROM edges e JOIN nodes s ON s.id = e.source_id JOIN nodes t ON t.id = e.target_id
+        WHERE (e.source_id = ? OR e.target_id = ?)
+        ORDER BY e.id
+        """,
+        (hub_id, hub_id),
+    ).fetchall()
+    plan = "\n".join(row[3] for row in plan_rows)
+
+    assert "SCAN e" not in plan
