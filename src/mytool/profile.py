@@ -63,16 +63,29 @@ class Profile:
         node_kinds: dict[str, NodeKind] = {}
         for key, spec in node_kinds_raw.items():
             kind = _mapping_spec(key, spec, "node kind", source)
-            node_kinds[str(key)] = NodeKind(key=str(key), description=_optional_string(kind, "description", source))
+            node_kinds[str(key)] = NodeKind(
+                key=str(key),
+                description=_optional_string(kind, "description", source),
+            )
 
         edge_types: dict[str, EdgeType] = {}
         for key, spec in edge_types_raw.items():
             edge = _mapping_spec(key, spec, "edge type", source)
-            source_kinds = _string_list(edge, "source_kinds", f"edge type {key!r} in {source}")
-            target_kinds = _string_list(edge, "target_kinds", f"edge type {key!r} in {source}")
+            source_kinds = _string_list(
+                edge,
+                "source_kinds",
+                f"edge type {key!r} in {source}",
+            )
+            target_kinds = _string_list(
+                edge,
+                "target_kinds",
+                f"edge type {key!r} in {source}",
+            )
             for kind in (*source_kinds, *target_kinds):
                 if kind not in node_kinds:
-                    raise ProfileValidationError(f"edge type {key!r} references unknown node kind {kind!r}")
+                    raise ProfileValidationError(
+                        f"edge type {key!r} references unknown node kind {kind!r}"
+                    )
             edge_types[str(key)] = EdgeType(
                 key=str(key),
                 source_kinds=tuple(source_kinds),
@@ -81,12 +94,20 @@ class Profile:
                 symmetric=bool(edge.get("symmetric", False)),
             )
 
-        return cls(name=name, description=description, node_kinds=node_kinds, edge_types=edge_types)
+        return cls(
+            name=name,
+            description=description,
+            node_kinds=node_kinds,
+            edge_types=edge_types,
+        )
 
     def validate_node_kind(self, kind: str) -> bool:
         if kind not in self.node_kinds:
             allowed = ", ".join(sorted(self.node_kinds)) or "none"
-            raise ProfileValidationError(f"node kind {kind!r} is not allowed by profile {self.name!r}; allowed kinds: {allowed}")
+            raise ProfileValidationError(
+                f"node kind {kind!r} is not allowed by profile {self.name!r}; "
+                f"allowed kinds: {allowed}"
+            )
         return True
 
     def validate_edge(self, source_kind: str, edge_type: str, target_kind: str) -> bool:
@@ -95,20 +116,32 @@ class Profile:
         edge = self.edge_types.get(edge_type)
         if edge is None:
             allowed = ", ".join(sorted(self.edge_types)) or "none"
-            raise ProfileValidationError(f"edge type {edge_type!r} is not allowed by profile {self.name!r}; allowed edge types: {allowed}")
+            raise ProfileValidationError(
+                f"edge type {edge_type!r} is not allowed by profile {self.name!r}; "
+                f"allowed edge types: {allowed}"
+            )
         if source_kind not in edge.source_kinds:
             allowed = ", ".join(edge.source_kinds)
-            raise ProfileValidationError(f"edge {edge_type!r} cannot start from node kind {source_kind!r}; allowed source kinds: {allowed}")
+            raise ProfileValidationError(
+                f"edge {edge_type!r} cannot start from node kind {source_kind!r}; "
+                f"allowed source kinds: {allowed}"
+            )
         if target_kind not in edge.target_kinds:
             allowed = ", ".join(edge.target_kinds)
-            raise ProfileValidationError(f"edge {edge_type!r} cannot target node kind {target_kind!r}; allowed target kinds: {allowed}")
+            raise ProfileValidationError(
+                f"edge {edge_type!r} cannot target node kind {target_kind!r}; "
+                f"allowed target kinds: {allowed}"
+            )
         return True
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "description": self.description,
-            "node_kinds": {key: {"description": node.description} for key, node in self.node_kinds.items()},
+            "node_kinds": {
+                key: {"description": node.description}
+                for key, node in self.node_kinds.items()
+            },
             "edge_types": {
                 key: {
                     "description": edge.description,
@@ -124,7 +157,9 @@ class Profile:
 def _required_string(raw: dict[str, Any], key: str, source: str) -> str:
     value = raw.get(key)
     if not isinstance(value, str) or not value.strip():
-        raise ProfileValidationError(f"{source} must define non-empty string field {key!r}")
+        raise ProfileValidationError(
+            f"{source} must define non-empty string field {key!r}"
+        )
     return value
 
 
@@ -133,7 +168,9 @@ def _optional_string(raw: dict[str, Any], key: str, source: str) -> str | None:
     if value is None:
         return None
     if not isinstance(value, str):
-        raise ProfileValidationError(f"{source} field {key!r} must be a string when provided")
+        raise ProfileValidationError(
+            f"{source} field {key!r} must be a string when provided"
+        )
     return value
 
 
@@ -146,7 +183,9 @@ def _required_mapping(raw: dict[str, Any], key: str, source: str) -> dict[str, A
 
 def _mapping_spec(key: Any, spec: Any, label: str, source: str) -> dict[str, Any]:
     if not isinstance(key, str) or not key.strip():
-        raise ProfileValidationError(f"{source} contains a {label} with a non-empty string key")
+        raise ProfileValidationError(
+            f"{source} contains a {label} with a non-empty string key"
+        )
     if not isinstance(spec, dict):
         raise ProfileValidationError(f"{label} {key!r} in {source} must be a mapping")
     return spec
@@ -154,10 +193,15 @@ def _mapping_spec(key: Any, spec: Any, label: str, source: str) -> dict[str, Any
 
 def _string_list(raw: dict[str, Any], key: str, source: str) -> list[str]:
     value = raw.get(key)
-    if not isinstance(value, list) or not value or not all(isinstance(item, str) and item.strip() for item in value):
-        raise ProfileValidationError(f"{source} must define non-empty string list {key!r}")
+    if (
+        not isinstance(value, list)
+        or not value
+        or not all(isinstance(item, str) and item.strip() for item in value)
+    ):
+        raise ProfileValidationError(
+            f"{source} must define non-empty string list {key!r}"
+        )
     return value
-
 
 
 def _load_yaml(text: str) -> Any:

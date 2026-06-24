@@ -22,7 +22,9 @@ def print_json(value: Any) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="SQLite relationship graph DB for AI agents")
+    parser = argparse.ArgumentParser(
+        description="SQLite relationship graph DB for AI agents"
+    )
     parser.add_argument("--db", default="graph.db", help="SQLite DB path (default: graph.db)")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -75,16 +77,38 @@ def main(argv: list[str] | None = None) -> None:
         print_json(Profile.load(args.profile).to_dict())
         return
     if args.command == "validate-edge":
-        Profile.load(args.profile).validate_edge(args.source_kind, args.edge_type, args.target_kind)
-        print_json({"valid": True, "source_kind": args.source_kind, "edge_type": args.edge_type, "target_kind": args.target_kind})
+        Profile.load(args.profile).validate_edge(
+            args.source_kind,
+            args.edge_type,
+            args.target_kind,
+        )
+        print_json(
+            {
+                "valid": True,
+                "source_kind": args.source_kind,
+                "edge_type": args.edge_type,
+                "target_kind": args.target_kind,
+            }
+        )
         return
 
     db = GraphDB(args.db)
     try:
         if args.command == "add-node":
-            result = db.add_node(args.key, args.label, args.kind, parse_props(args.props))
+            result = db.add_node(
+                args.key,
+                args.label,
+                args.kind,
+                parse_props(args.props),
+            )
         elif args.command == "add-edge":
-            result = db.add_edge(args.source, args.type, args.target, parse_props(args.props), not args.no_create_missing)
+            result = db.add_edge(
+                args.source,
+                args.type,
+                args.target,
+                parse_props(args.props),
+                not args.no_create_missing,
+            )
         elif args.command == "find-edges":
             result = db.find_edges(args.source, args.target, args.type, args.limit)
         elif args.command == "neighbors":
