@@ -5,6 +5,7 @@ import json
 from typing import Any
 
 from .graphdb import GraphDB
+from .profile import Profile
 
 
 def parse_props(raw: str | None) -> dict[str, Any]:
@@ -56,11 +57,28 @@ def build_parser() -> argparse.ArgumentParser:
     path.add_argument("target")
     path.add_argument("--max-depth", type=int, default=4)
     path.add_argument("--type")
+
+    profile_info = sub.add_parser("profile-info", help="Describe a declarative profile")
+    profile_info.add_argument("profile")
+
+    validate_edge = sub.add_parser("validate-edge", help="Validate a profile edge shape")
+    validate_edge.add_argument("profile")
+    validate_edge.add_argument("source_kind")
+    validate_edge.add_argument("edge_type")
+    validate_edge.add_argument("target_kind")
     return parser
 
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
+    if args.command == "profile-info":
+        print_json(Profile.load(args.profile).to_dict())
+        return
+    if args.command == "validate-edge":
+        Profile.load(args.profile).validate_edge(args.source_kind, args.edge_type, args.target_kind)
+        print_json({"valid": True, "source_kind": args.source_kind, "edge_type": args.edge_type, "target_kind": args.target_kind})
+        return
+
     db = GraphDB(args.db)
     try:
         if args.command == "add-node":
