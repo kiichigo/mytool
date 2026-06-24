@@ -18,6 +18,13 @@ mytool add-node relation:uses --kind relation_type --label "uses"
 mytool add-edge relation:uses description text:uses-definition --props '{"text":"source uses target"}'
 ```
 
+
+### Experimental declarative profiles
+
+Profiles are an optional experimental layer on top of the generic graph model. A profile is a small YAML file that declares allowed node kinds and edge shapes (`source_kind + edge_type + target_kind`) without changing `GraphDB` itself.
+
+Profiles validate graph structure; they do not prove factual truth. For example, a profile can reject an edge shape that says a `concept` created a `work`, but it cannot prove whether a particular creator really made a particular work. See [`examples/work_notes`](examples/work_notes) for a minimal domain-pack style example.
+
 ### Choices and rationale
 
 - **SQLite first**: easy to inspect, back up, embed, and run from MCP without operating a graph database.
@@ -51,6 +58,13 @@ mytool --db graph.db path agent:alice concept:graph-db --max-depth 4
 ```
 
 All commands print JSON.
+
+Profile commands are also available for inspecting and validating declarative profiles:
+
+```bash
+mytool profile-info examples/work_notes/profile.yaml
+mytool validate-edge examples/work_notes/profile.yaml person created work
+```
 
 ## MCP server
 
