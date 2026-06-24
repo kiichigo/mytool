@@ -68,6 +68,10 @@ Exposed tools:
 - `neighbors(key, direction="both", depth=1, type=None, limit=100)`
 - `path(source, target, max_depth=4, type=None)`
 
+## Concept documents
+
+- [Layered relationship DB concept](docs/LAYERED_RELATIONSHIP_DB.md): a proposed architecture for keeping the core graph generic while adding schema profiles and user-facing modes for domains such as manga or movie relationship charts.
+
 ## Development
 
 ```bash
